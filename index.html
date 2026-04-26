@@ -211,7 +211,7 @@ var DIMS=[
   {n:"Ética, riesgos y límites",ids:["D1","D2","D3","D4","D5"],blk:"D"}
 ];
 
-var ans={}, cur=0;
+var ans={}, cur=0, revealed={};
 
 function blkInfo(id){ return BLOCKS.find(function(b){return b.id===id;})||{}; }
 
@@ -259,7 +259,7 @@ function render(){
     var c=filled?b.color:active?b.color+"88":"#e8e6e0";
     return '<div class="block-seg" style="background:'+c+';flex:5;"></div>';
   }).join('');
-  var pbHtml='<div class="progress-wrap"><div class="blocks-bar">'+pbSegs+'</div><div class="progress-label">Pregunta '+(cur+1)+' de '+total+'</div></div>';
+  var pbHtml='<div class="progress-wrap"><div class="blocks-bar">'+pbSegs+'</div>'+(cur<total?'<div class="progress-label">Pregunta '+(cur+1)+' de '+total+'</div>':'')+'</div>';
 
   if(cur>=total){document.getElementById("app").innerHTML=pbHtml+renderResults();return;}
 
@@ -289,15 +289,18 @@ function render(){
   } else {
     if(q.sc) body+='<div class="scenario" style="border-left-color:'+(bi.color||'#534AB7')+';">'+q.sc+'</div>';
     body+='<div class="q-text">'+q.text+'</div>';
+    var locked=!!ans[q.id];
     body+='<div class="opts">';
     q.opts.forEach(function(o){
       var sel=ans[q.id]===o.k;
-      body+='<button class="opt'+(sel?' sel':'')+'" style="--blk-color:'+(bi.color||'#534AB7')+';--blk-bg:'+(bi.bg||'#EEEDFE')+';" onclick="pickMC(\''+q.id+'\',\''+o.k+'\')"><span class="opt-k">'+o.k+'.</span><span>'+o.t+'</span></button>';
+      var disabledAttr=locked&&!sel?' disabled style="--blk-color:'+(bi.color||'#534AB7')+';--blk-bg:'+(bi.bg||'#EEEDFE')+';opacity:0.4;cursor:default;"':' style="--blk-color:'+(bi.color||'#534AB7')+';--blk-bg:'+(bi.bg||'#EEEDFE')+';"';
+      var onclickAttr=locked?'':' onclick="pickMC(\''+q.id+'\',\''+o.k+'\')"';
+      body+='<button class="opt'+(sel?' sel':'')+'"'+disabledAttr+onclickAttr+'><span class="opt-k">'+o.k+'.</span><span>'+o.t+'</span></button>';
     });
     body+='</div>';
-    if(ans[q.id]&&q.why){
+    if(revealed[q.id]&&q.why){
       var isOk=ans[q.id]===q.correct;
-      body+='<div class="feedback '+(isOk?'ok':'ko')+'"><strong>'+(isOk?'Correcto':'Incorrecto')+'</strong> — '+q.why+'</div>';
+      body+='<div class="feedback '+(isOk?'ok':'ko')+'"><strong>'+(isOk?'✓ Correcto':'✗ Incorrecto')+'</strong> — '+q.why+'</div>';
     }
   }
 
@@ -387,18 +390,15 @@ function sendResults(){
 
   fetch(POWER_AUTOMATE_URL,{
     method:'POST',
+    mode:'no-cors',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify(payload)
   })
-  .then(function(r){
-    if(r.ok||r.status===202){
-      btn.style.display='none';
-      msg.style.display='block';
-      msg.style.color='#085041';
-      msg.innerHTML='<strong>Resultados enviados correctamente.</strong><br>Tus respuestas han sido registradas en el sistema.';
-    } else {
-      throw new Error('HTTP '+r.status);
-    }
+  .then(function(){
+    btn.style.display='none';
+    msg.style.display='block';
+    msg.style.color='#085041';
+    msg.innerHTML='<strong>Resultados enviados correctamente.</strong><br>Tus respuestas han sido registradas en el sistema.';
   })
   .catch(function(){
     btn.disabled=false;
@@ -410,9 +410,9 @@ function sendResults(){
   });
 }
 
-function pickMC(id,k){ans[id]=k;render();}
+function pickMC(id,k){if(!ans[id]){ans[id]=k;render();}}
 function pickScale(n){ans['q20']=String(n);render();}
-function goNext(){if(canAdvance()&&cur<Qs.length){cur++;render();}}
+function goNext(){if(canAdvance()&&cur<Qs.length){var q=Qs[cur];if(q.correct&&ans[q.id]){revealed[q.id]=true;}cur++;render();}}
 function goBack(){if(cur>0){cur--;render();}}
 render();
 </script>
