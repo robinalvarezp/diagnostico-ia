@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico de IA — Equipo de Tecnología</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f7f4; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+  .card { background: #fff; border-radius: 16px; border: 0.5px solid #e0ddd6; padding: 2rem; max-width: 680px; width: 100%; margin: 0 auto; }
+  .header { margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 0.5px solid #e8e6e0; }
+  .header h1 { font-size: 18px; font-weight: 600; color: #1a1916; margin-bottom: 4px; }
+  .header p { font-size: 13px; color: #888780; }
+  .progress-wrap { margin-bottom: 1.5rem; }
+  .blocks-bar { display: flex; gap: 4px; margin-bottom: 6px; }
+  .block-seg { height: 4px; border-radius: 2px; flex: 1; background: #e8e6e0; transition: background 0.3s; }
+  .progress-label { font-size: 11px; color: #888780; }
+  .section-tag { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; margin-bottom: 8px; }
+  .q-meta { font-size: 11px; color: #888780; margin-bottom: 4px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500; }
+  .q-step { font-size: 12px; color: #b4b2a9; margin-bottom: 10px; }
+  .scenario { border-left: 2px solid #534AB7; border-radius: 0 8px 8px 0; background: #f5f4f0; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #5f5e5a; line-height: 1.65; }
+  .q-text { font-size: 15px; font-weight: 600; color: #1a1916; line-height: 1.5; margin-bottom: 14px; }
+  .opts { display: flex; flex-direction: column; gap: 9px; }
+  .opt { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border: 0.5px solid #e0ddd6; border-radius: 10px; background: #fff; cursor: pointer; text-align: left; font-size: 13.5px; color: #1a1916; line-height: 1.55; width: 100%; transition: border-color 0.12s, background 0.12s; }
+  .opt:hover { border-color: #b4b2a9; background: #faf9f7; }
+  .opt.sel { border-color: var(--blk-color, #534AB7); background: var(--blk-bg, #EEEDFE); }
+  .opt-k { font-weight: 600; min-width: 18px; font-size: 12px; color: #b4b2a9; flex-shrink: 0; margin-top: 1px; }
+  .opt.sel .opt-k { color: var(--blk-color, #534AB7); }
+  .feedback { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12.5px; line-height: 1.65; }
+  .feedback.ok { background: #E1F5EE; color: #085041; }
+  .feedback.ko { background: #FCEBEB; color: #791F1F; }
+  .feedback strong { font-weight: 600; }
+  .scale-row { display: flex; gap: 8px; }
+  .sc-btn { flex: 1; padding: 11px 8px; border: 0.5px solid #e0ddd6; border-radius: 10px; background: #fff; cursor: pointer; font-size: 16px; font-weight: 600; color: #1a1916; text-align: center; transition: border-color 0.12s, background 0.12s; }
+  .sc-btn:hover { border-color: #b4b2a9; background: #faf9f7; }
+  .sc-btn.sel { border-color: #534AB7; background: #EEEDFE; color: #26215C; }
+  .sc-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #888780; }
+  .name-input { width: 100%; padding: 11px 14px; border-radius: 10px; border: 0.5px solid #d3d1c7; background: #fff; font-size: 14px; color: #1a1916; outline: none; transition: border-color 0.15s; }
+  .name-input:focus { border-color: #534AB7; }
+  .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+  .btn-back { padding: 10px 20px; border-radius: 10px; border: 0.5px solid #d3d1c7; background: #fff; color: #1a1916; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .btn-back:hover { background: #f5f4f0; }
+  .btn-next { padding: 10px 24px; border-radius: 10px; border: none; background: #534AB7; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.12s; }
+  .btn-next:hover { background: #3C3489; }
+  .btn-next:disabled { opacity: 0.3; cursor: not-allowed; }
+  .step-count { font-size: 12px; color: #b4b2a9; }
+  .result-card { border: 0.5px solid #e0ddd6; border-radius: 12px; padding: 1.25rem; margin-bottom: 12px; }
+  .level-badge { display: inline-block; padding: 3px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; margin-bottom: 10px; }
+  .score-big { font-size: 44px; font-weight: 700; color: #1a1916; line-height: 1; }
+  .score-sub { font-size: 13px; color: #888780; margin: 4px 0 10px; }
+  .score-desc { font-size: 13.5px; color: #5f5e5a; line-height: 1.65; }
+  .dim-block { margin-bottom: 14px; }
+  .dim-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .dim-name { font-size: 13px; color: #1a1916; }
+  .dim-pct { font-size: 12px; font-weight: 600; }
+  .dim-bar-bg { height: 6px; border-radius: 3px; background: #e8e6e0; }
+  .dim-bar-fill { height: 6px; border-radius: 3px; transition: width 0.6s; }
+  .calib-box { background: #f5f4f0; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #5f5e5a; margin-bottom: 12px; line-height: 1.6; }
+  .btn-plan { padding: 10px 22px; border-radius: 10px; border: none; background: #534AB7; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; display: block; margin: 0 auto; }
+  .btn-plan:hover { background: #3C3489; }
+  .block-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; color: #888780; }
+  @media(max-width:500px){ .card{padding:1.25rem;} .score-big{font-size:36px;} }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>Diagnóstico de conocimiento en IA</h1>
+    <p>Equipo de Tecnología · 21 preguntas · ~10 minutos</p>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+var BLOCKS=[
+  {id:"A",name:"IA generativa — fundamentos",color:"#534AB7",bg:"#EEEDFE"},
+  {id:"B",name:"Agentes de IA",color:"#1D9E75",bg:"#E1F5EE"},
+  {id:"C",name:"Casos de uso en tecnología",color:"#185FA5",bg:"#E6F1FB"},
+  {id:"D",name:"Ética, riesgos y límites",color:"#854F0B",bg:"#FAEEDA"}
+];
+
+var Qs=[
+  {id:"q0",type:"name",block:"Identificación",text:"¿Cuál es tu nombre completo?"},
+  {id:"A1",blk:"A",text:"¿Cuál es la diferencia fundamental entre un modelo de IA generativa y un modelo de IA predictivo tradicional?",opts:[
+    {k:"A",t:"El modelo generativo requiere más datos de entrenamiento y mayor cómputo, pero produce los mismos tipos de salida que un modelo predictivo bien configurado.",s:0},
+    {k:"B",t:"El modelo predictivo puede operar sin GPU mientras que el generativo siempre requiere aceleración de hardware para funcionar correctamente.",s:0},
+    {k:"C",t:"El modelo generativo produce contenido nuevo (texto, imágenes, código) aprendiendo la distribución de los datos; el predictivo estima un valor o categoría sobre datos existentes.",s:3},
+    {k:"D",t:"Los modelos generativos están diseñados exclusivamente para lenguaje natural; los predictivos son los únicos que pueden trabajar con datos numéricos estructurados.",s:0}
+  ],correct:"C",why:"La distinción clave es el tipo de salida. Predictivo: clasifica o estima algo que ya existe. Generativo: produce algo nuevo que no existía. Ambos pueden correr en CPU y trabajar con distintos tipos de datos."},
+  {id:"A2",blk:"A",text:"¿Qué es el 'contexto' o 'ventana de contexto' en un modelo de lenguaje y por qué importa en aplicaciones reales?",opts:[
+    {k:"A",t:"Es la memoria permanente que el modelo construye sobre cada usuario a lo largo de múltiples sesiones para personalizar sus respuestas futuras.",s:0},
+    {k:"B",t:"Es la cantidad máxima de texto (en tokens) que el modelo puede procesar en una sola interacción. Si el input supera ese límite, el modelo no puede leer toda la información y puede perder coherencia o datos críticos.",s:3},
+    {k:"C",t:"Es el conjunto de documentos con los que fue entrenado el modelo; determina qué temas puede responder con autoridad y cuáles debe rechazar.",s:0},
+    {k:"D",t:"Es el número de respuestas alternativas que el modelo evalúa internamente antes de seleccionar la más adecuada según la temperatura configurada.",s:0}
+  ],correct:"B",why:"La ventana de contexto es un límite físico del modelo. No es memoria persistente entre sesiones ni el corpus de entrenamiento. Su tamaño determina cuánto documento, historial o instrucción puede procesar de una vez."},
+  {id:"A3",blk:"A",text:"Un LLM responde con total confianza que el director general de una empresa es una persona que renunció hace seis meses. ¿Cuál es la causa técnica de este error?",opts:[
+    {k:"A",t:"El modelo no tiene acceso a bases de datos estructuradas y solo puede responder preguntas sobre conceptos generales, no sobre personas específicas.",s:0},
+    {k:"B",t:"El prompt no especificó la fecha de la consulta, lo que hace que el modelo seleccione aleatoriamente una respuesta sin verificar su veracidad.",s:0},
+    {k:"C",t:"El modelo confundió el nombre de la empresa con otra similar en su corpus de entrenamiento, produciendo respuestas mezcladas entre entidades distintas.",s:0},
+    {k:"D",t:"El modelo tiene una fecha de corte de conocimiento y no accede a información en tiempo real; su respuesta refleja datos de entrenamiento desactualizados.",s:3}
+  ],correct:"D",why:"Los LLMs tienen un knowledge cutoff — no saben qué pasó después de su fecha de entrenamiento. La solución es RAG, búsqueda web en tiempo real o indicar explícitamente esa limitación al usuario."},
+  {id:"A4",blk:"A",text:"¿Qué técnica permite mejorar la calidad de respuesta de un LLM sin modificar sus parámetros ni reentrenarlo?",opts:[
+    {k:"A",t:"Quantización del modelo: reducir la precisión numérica de los pesos de float32 a int8 para mejorar la coherencia semántica de las respuestas.",s:0},
+    {k:"B",t:"Aumentar el batch size durante la inferencia para que el modelo procese más tokens en paralelo y seleccione respuestas de mayor calidad estadística.",s:0},
+    {k:"C",t:"Prompt engineering: estructurar la instrucción con contexto, rol, ejemplos y formato esperado para guiar el razonamiento del modelo.",s:3},
+    {k:"D",t:"Activar el modo de temperatura cero, que desactiva el muestreo estocástico y obliga al modelo a usar solo el token más probable en cada paso.",s:0}
+  ],correct:"C",why:"Prompt engineering es la técnica más accesible y poderosa para mejorar calidad sin tocar el modelo. Quantización mejora velocidad/memoria, no calidad semántica. Temperatura cero mejora determinismo, no necesariamente calidad."},
+  {id:"A5",blk:"A",text:"¿Qué significa que un modelo de lenguaje sea 'no determinista' y qué implicación tiene para aplicaciones empresariales?",opts:[
+    {k:"A",t:"Que el modelo no puede garantizar respuestas en un tiempo máximo definido, lo que impide usarlo en sistemas con SLA de latencia estrictos.",s:0},
+    {k:"B",t:"Que el mismo prompt puede producir respuestas distintas en diferentes ejecuciones. En aplicaciones empresariales los resultados no son 100% reproducibles y requieren validación antes de usarse en procesos críticos.",s:3},
+    {k:"C",t:"Que el modelo genera respuestas en orden aleatorio dentro de un rango de opciones predefinidas durante el entrenamiento.",s:0},
+    {k:"D",t:"Que el comportamiento del modelo varía según el hardware donde se ejecuta, haciendo imposible replicar resultados entre ambientes de desarrollo y producción.",s:0}
+  ],correct:"B",why:"No determinismo viene del muestreo estocástico. Para procesos críticos esto implica: siempre validar salidas, no asumir reproducibilidad y diseñar con revisión humana en el loop."},
+  {id:"B1",blk:"B",text:"¿Qué capacidad distingue a un agente de IA de un asistente conversacional que solo genera texto?",opts:[
+    {k:"A",t:"Un agente usa un modelo de lenguaje con mayor número de parámetros, lo que le permite mantener conversaciones más largas sin perder coherencia entre turnos.",s:0},
+    {k:"B",t:"Un agente tiene acceso a los datos personales del usuario para personalizar sus respuestas, mientras que un asistente conversacional opera con información anónima.",s:0},
+    {k:"C",t:"Un agente requiere que el usuario defina explícitamente cada acción a ejecutar; el asistente conversacional infiere la intención sin instrucciones detalladas.",s:0},
+    {k:"D",t:"Un agente puede planificar una secuencia de pasos, usar herramientas externas (APIs, bases de datos, navegadores) y tomar decisiones iterativas hasta completar un objetivo, no solo responder un turno.",s:3}
+  ],correct:"D",why:"La distinción es acción vs. respuesta. Un chatbot genera texto. Un agente actúa: llama una API, lee un archivo, ejecuta código, evalúa el resultado y decide el siguiente paso."},
+  {id:"B2",blk:"B",sc:"Un agente de IA tiene acceso a las siguientes herramientas: consultar tickets de soporte, actualizar el estado de un ticket, escalar a un ingeniero y enviar correos al usuario final.",text:"El agente recibe esta instrucción: 'Resuelve todos los tickets abiertos de los últimos 7 días.' ¿Cuál es el riesgo más crítico de ejecutar esta instrucción sin restricciones?",opts:[
+    {k:"A",t:"Que el agente entre en un loop infinito intentando resolver tickets que se regeneran más rápido de lo que él los procesa.",s:0},
+    {k:"B",t:"Que el agente ejecute acciones irreversibles (cerrar tickets, enviar correos, escalar casos) basándose en su propio criterio sobre qué significa 'resolver', sin validación humana de cada decisión.",s:3},
+    {k:"C",t:"Que el agente no pueda acceder a tickets de más de 3 días de antigüedad por limitaciones del modelo de embeddings que usa para recuperar contexto.",s:0},
+    {k:"D",t:"Que el agente genere respuestas en el idioma del modelo base en lugar del idioma de los tickets, causando confusión en los usuarios.",s:0}
+  ],correct:"B",why:"Instrucciones ambiguas + herramientas con acciones irreversibles es la combinación más peligrosa. 'Resolver' puede significar cerrar, escalar o ignorar. Se requiere scope acotado y validación humana antes de acciones de impacto."},
+  {id:"B3",blk:"B",text:"¿Qué es el bucle de razonamiento (ReAct loop) en un agente y para qué sirve?",opts:[
+    {k:"A",t:"Es un mecanismo de seguridad que hace que el agente revise sus respuestas anteriores para detectar contradicciones antes de enviar cada mensaje al usuario.",s:0},
+    {k:"B",t:"Es el proceso por el cual el agente construye un árbol de decisiones probabilísticas basado en el historial de conversaciones previas con usuarios similares.",s:0},
+    {k:"C",t:"Es el ciclo iterativo donde el agente alterna entre razonar sobre el estado actual, decidir qué acción tomar, ejecutar la acción y observar el resultado, hasta alcanzar el objetivo o un estado de parada.",s:3},
+    {k:"D",t:"Es la técnica de reiniciar el contexto del modelo cada N turnos para evitar que el agente acumule errores de razonamiento a lo largo de una tarea larga.",s:0}
+  ],correct:"C",why:"ReAct (Reasoning + Acting) es el patrón fundamental de los agentes modernos. Sin este ciclo, el agente no podría adaptarse a resultados inesperados de las herramientas ni corregir su curso durante la ejecución."},
+  {id:"B4",blk:"B",sc:"Tu equipo evalúa construir un agente que lea correos entrantes de proveedores, extraiga datos clave (monto, fecha, condiciones) y los registre automáticamente en el ERP.",text:"¿Cuál es la condición técnica más importante antes de activar el registro automático en el ERP?",opts:[
+    {k:"A",t:"Que el agente haya procesado al menos 1 000 correos en modo de prueba para que el modelo se estabilice con el vocabulario de los proveedores.",s:0},
+    {k:"B",t:"Que el ERP tenga una API REST documentada con soporte para transacciones ACID, garantizando que los registros del agente sean atómicos e irreversibles.",s:0},
+    {k:"C",t:"Que los correos de proveedores estén en un formato estandarizado previamente acordado, ya que los agentes no pueden procesar texto no estructurado con variaciones de formato.",s:0},
+    {k:"D",t:"Que el agente reporte un nivel de confianza por cada campo extraído y que los registros bajo cierto umbral se enruten a revisión humana antes de tocar el ERP.",s:3}
+  ],correct:"D",why:"Un agente que extrae datos de texto libre cometerá errores. Confidence scoring + revisión humana en casos ambiguos es el patrón estándar antes de escritura en sistemas transaccionales."},
+  {id:"B5",blk:"B",text:"¿Por qué es importante el principio de 'mínimo privilegio' en el diseño de agentes de IA?",opts:[
+    {k:"A",t:"Porque los modelos de lenguaje tienen un límite en el número de herramientas que pueden gestionar simultáneamente; más permisos implica mayor confusión en la selección de acciones.",s:0},
+    {k:"B",t:"Porque un agente con más permisos de los necesarios puede causar daño mayor ante un error de razonamiento, una instrucción ambigua o un ataque de prompt injection — el alcance del daño crece con los permisos disponibles.",s:3},
+    {k:"C",t:"Porque las auditorías de seguridad empresarial exigen que cualquier sistema automatizado opere con credenciales de solo lectura durante los primeros 90 días de producción.",s:0},
+    {k:"D",t:"Porque otorgar permisos amplios al agente aumenta la latencia de respuesta ya que debe evaluar más opciones antes de seleccionar la acción correcta.",s:0}
+  ],correct:"B",why:"Mínimo privilegio reduce la superficie de daño. Un agente que solo puede leer no puede borrar. El error o el ataque están limitados por lo que el agente puede hacer, no por lo que debería hacer."},
+  {id:"C1",blk:"C",text:"¿En cuál de estos escenarios aporta más valor la IA generativa frente a otras soluciones de automatización?",opts:[
+    {k:"A",t:"Extraer un reporte diario de ventas desde SAP en formato fijo y cargarlo en un dashboard de Power BI sin transformaciones adicionales.",s:0},
+    {k:"B",t:"Sincronizar el inventario entre el WMS y el ERP cada 15 minutos usando una API REST con schema predefinido en ambos extremos.",s:0},
+    {k:"C",t:"Clasificar y responder solicitudes de soporte que llegan en texto libre con variaciones de redacción, donde la intención debe inferirse del lenguaje natural.",s:3},
+    {k:"D",t:"Enviar una notificación automática por correo cuando el stock de un SKU cae por debajo del umbral mínimo configurado en el sistema.",s:0}
+  ],correct:"C",why:"Los otros tres casos son automatización de procesos estructurados: RPA o integraciones API los resuelven mejor y más barato. La IA generativa agrega valor donde hay lenguaje natural, variabilidad semántica o necesidad de interpretación."},
+  {id:"C2",blk:"C",sc:"El equipo de infraestructura recibe 40 alertas diarias de monitoreo. El 70% son falsos positivos que un ingeniero descarta en menos de 2 minutos tras revisar el contexto.",text:"¿Cómo podría la IA generativa agregar valor en este flujo sin reemplazar el juicio del ingeniero?",opts:[
+    {k:"A",t:"Entrenar un clasificador que descarte automáticamente el 70% de alertas identificadas como falsos positivos, liberando al ingeniero para el 30% restante.",s:0},
+    {k:"B",t:"Generar un resumen semanal de las alertas más frecuentes para que el equipo priorice cuáles componentes requieren mantenimiento preventivo.",s:0},
+    {k:"C",t:"Reemplazar el sistema de monitoreo actual por un modelo de IA que aprenda los patrones normales y solo genere alertas cuando detecte anomalías reales.",s:0},
+    {k:"D",t:"Enriquecer cada alerta con contexto automático (historial del componente, alertas relacionadas, posibles causas) para que el ingeniero decida en menos tiempo y con más información.",s:3}
+  ],correct:"D",why:"El caso pide augmentation, no automation. Enriquecer la alerta con contexto reduce el tiempo de triaje sin quitar al ingeniero la decisión final. El clasificador automático (opción B) reemplaza el juicio, lo que fue descartado."},
+  {id:"C3",blk:"C",text:"Un equipo de desarrollo quiere usar IA generativa para acelerar la escritura de código. ¿Cuál es el riesgo operacional más importante a gestionar?",opts:[
+    {k:"A",t:"Que el modelo genere código en un lenguaje de programación distinto al del proyecto, causando errores de compilación que el equipo tarda en identificar.",s:0},
+    {k:"B",t:"Que el desarrollador acepte código generado sin revisarlo, introduciendo vulnerabilidades de seguridad o lógica incorrecta que pasan los tests básicos pero fallan en producción.",s:3},
+    {k:"C",t:"Que el uso intensivo de la API del modelo supere el presupuesto mensual de la herramienta y genere interrupciones del servicio para el equipo.",s:0},
+    {k:"D",t:"Que los desarrolladores menos experimentados aprendan patrones incorrectos del código generado y los repliquen en otras partes del sistema sin supervisión.",s:0}
+  ],correct:"B",why:"El mayor riesgo es el exceso de confianza: código que compila y pasa tests básicos puede tener vulnerabilidades de seguridad o lógica de negocio incorrecta. La IA genera código plausible, no necesariamente correcto ni seguro."},
+  {id:"C4",blk:"C",sc:"El área de datos maestros tiene el problema de que el 25% de los registros de productos en el ERP tienen descripciones inconsistentes: mayúsculas mezcladas, abreviaciones distintas para el mismo atributo, y campos incorrectos.",text:"¿Cómo podría usarse IA generativa para atacar este problema?",opts:[
+    {k:"A",t:"Para reemplazar el proceso de carga de datos maestros, generando automáticamente las descripciones de productos nuevos sin intervención del área.",s:0},
+    {k:"B",t:"Para entrenar un modelo predictivo que detecte en tiempo real cuándo un nuevo registro va a tener inconsistencias antes de ser guardado en el ERP.",s:0},
+    {k:"C",t:"Para estandarizar y enriquecer descripciones en lote: el modelo puede inferir el formato correcto, unificar abreviaciones y proponer la categoría adecuada, con revisión humana de los casos de baja confianza.",s:3},
+    {k:"D",t:"Para traducir automáticamente todas las descripciones al inglés, que es el idioma estándar de los sistemas ERP, eliminando así las inconsistencias de idioma.",s:0}
+  ],correct:"C",why:"La IA generativa es muy buena normalizando lenguaje natural en lote. El patrón correcto: generar propuesta + confidence score + revisión humana en casos ambiguos. Usarla sin validación introduce errores masivos."},
+  {id:"C5",blk:"C",text:"¿En cuál de estos casos el uso de IA generativa representaría un riesgo mayor que el beneficio potencial?",opts:[
+    {k:"A",t:"Redactar borradores de comunicaciones internas de cambios de sistema que luego son revisados y aprobados por el equipo antes de enviarse.",s:0},
+    {k:"B",t:"Resumir automáticamente los puntos clave de reuniones de proyecto a partir de la transcripción, para distribuir entre los asistentes.",s:0},
+    {k:"C",t:"Sugerir nombres alternativos para variables y funciones en una revisión de código, mejorando la legibilidad sin modificar la lógica.",s:0},
+    {k:"D",t:"Generar automáticamente y publicar sin revisión los términos y condiciones de contratos con clientes, basándose en plantillas previas y parámetros del negocio.",s:3}
+  ],correct:"D",why:"Documentos legales publicados sin revisión humana son un riesgo crítico: un error puede ser vinculante, generar pasivos legales o violar regulaciones. Las otras opciones tienen revisión humana en el flujo."},
+  {id:"D1",blk:"D",text:"¿Por qué un modelo de IA puede perpetuar o amplificar sesgos existentes en la organización, incluso si nadie lo programó para hacerlo?",opts:[
+    {k:"A",t:"Porque los modelos de IA están entrenados por equipos de ingeniería que inconscientemente incorporan sus perspectivas culturales en los hiperparámetros del modelo.",s:0},
+    {k:"B",t:"Porque aprende patrones estadísticos de los datos históricos, y si esos datos reflejan decisiones sesgadas del pasado, el modelo aprende y reproduce esos sesgos como si fueran el comportamiento correcto.",s:3},
+    {k:"C",t:"Porque los algoritmos de optimización priorizan la eficiencia computacional sobre la equidad, favoreciendo inevitablemente a los grupos más representados en el sistema.",s:0},
+    {k:"D",t:"Porque los modelos aprenden el lenguaje de los documentos de entrenamiento, y ese lenguaje siempre contiene marcadores culturales que sesgan las respuestas.",s:0}
+  ],correct:"B",why:"El sesgo en IA es fundamentalmente un problema de datos, no de intención. Si históricamente se aprobaron más solicitudes de un perfil, el modelo aprende que ese perfil tiene mayor probabilidad de aprobación y lo reproduce."},
+  {id:"D2",blk:"D",text:"¿Cuándo es técnicamente inapropiado usar un LLM como fuente de información para tomar una decisión operativa?",opts:[
+    {k:"A",t:"Cuando la decisión involucra más de tres variables, ya que los LLMs no pueden mantener coherencia lógica en razonamientos con alta dimensionalidad.",s:0},
+    {k:"B",t:"Cuando el prompt tiene más de 500 palabras, porque la capacidad de atención del modelo se degrada y las respuestas largas pierden precisión en los detalles.",s:0},
+    {k:"C",t:"Cuando la decisión requiere información precisa y verificable (cifras financieras, estatus legal, datos técnicos específicos) y no se tiene mecanismo para validar que la respuesta es correcta y está actualizada.",s:3},
+    {k:"D",t:"Cuando la decisión es urgente, porque los modelos de lenguaje tienen latencia variable que puede superar los 10 segundos en condiciones de alta demanda.",s:0}
+  ],correct:"C",why:"Los LLMs son excelentes para razonar y explorar — no para ser fuente de verdad verificable. Cuando la decisión depende de datos precisos y actualizados, el LLM debe conectarse a una fuente confiable o el resultado debe validarse independientemente."},
+  {id:"D3",blk:"D",sc:"El equipo de RRHH pide al área de tecnología construir un modelo de IA que evalúe automáticamente los CVs recibidos y descarte candidatos con baja probabilidad de éxito, basándose en el historial de empleados actuales.",text:"¿Cuál es el problema ético y técnico más serio de este sistema?",opts:[
+    {k:"A",t:"Que el modelo no puede leer CVs en formatos distintos a texto plano, excluyendo automáticamente candidatos que usen plantillas con diseño gráfico.",s:0},
+    {k:"B",t:"Que el proceso de entrenamiento requiere acceso a datos de desempeño de empleados actuales, lo que viola las políticas de privacidad interna de recursos humanos.",s:0},
+    {k:"C",t:"Que los candidatos descartados podrían solicitar explicación del rechazo y el modelo no puede generar justificaciones legalmente defendibles para cada caso.",s:0},
+    {k:"D",t:"Que el modelo aprenderá los patrones de los empleados actuales, que pueden ser homogéneos por sesgos históricos de selección, y descartará candidatos calificados que no encajan en ese perfil, discriminando sistemáticamente.",s:3}
+  ],correct:"D",why:"Este es uno de los casos más documentados de IA discriminatoria. Amazon retiró un sistema similar en 2018. Si los empleados actuales son mayoritariamente de cierto perfil, el modelo aprende ese perfil como 'exitoso' y descarta implícitamente a quien no lo cumple."},
+  {id:"D4",blk:"D",text:"¿Qué significa el concepto de 'explicabilidad' en un modelo de IA y por qué es relevante en contextos empresariales?",opts:[
+    {k:"A",t:"La capacidad del modelo de generar respuestas en lenguaje simple que puedan ser entendidas por usuarios sin formación técnica, democratizando el acceso a la IA.",s:0},
+    {k:"B",t:"La capacidad de entender y comunicar por qué el modelo tomó una decisión específica. Sin explicabilidad no se puede auditar errores, cumplir regulaciones ni generar confianza en los usuarios finales.",s:3},
+    {k:"C",t:"La documentación técnica que el equipo de ciencia de datos debe producir sobre la arquitectura del modelo para cumplir con las políticas internas de gestión del conocimiento.",s:0},
+    {k:"D",t:"El proceso de traducir el código del modelo a un lenguaje de programación más legible para que otros equipos puedan mantenerlo sin conocimiento de ML.",s:0}
+  ],correct:"B",why:"Sin explicabilidad, cuando el modelo falla no sabes por qué ni cómo corregirlo. En sectores regulados la explicabilidad no es opcional — regulaciones como GDPR exigen que las decisiones automatizadas sobre personas puedan ser explicadas."},
+  {id:"D5",blk:"D",text:"¿Cuál de estas afirmaciones describe mejor cuándo un equipo de tecnología debería rechazar o pausar un proyecto de IA?",opts:[
+    {k:"A",t:"Cuando el equipo no tiene científicos de datos con doctorado en ML, ya que proyectos sin ese nivel de expertise técnico tienden a fracasar en producción.",s:0},
+    {k:"B",t:"Cuando el caso de uso no ha sido implementado previamente por otra empresa del sector, ya que la falta de referentes aumenta el riesgo técnico y de negocio.",s:0},
+    {k:"C",t:"Cuando no se puede responder con claridad qué pasa si el modelo se equivoca, quién es responsable de ese error y cómo se detecta y corrige — independientemente del beneficio potencial del proyecto.",s:3},
+    {k:"D",t:"Cuando el modelo requeriría más de seis meses de desarrollo, ya que los proyectos de IA de larga duración tienen baja tasa de finalización en equipos corporativos.",s:0}
+  ],correct:"C",why:"El criterio de pausa no es técnico sino de responsabilidad y control: ¿quién responde si algo sale mal? ¿cómo lo detectamos? ¿cómo lo corregimos? Un proyecto sin respuestas claras no está listo para producción."},
+  {id:"q20",type:"scale",block:"Autopercepción",text:"Habiendo completado esta encuesta, ¿cómo calificarías tu nivel real de conocimiento en IA?"}
+];
+
+var DIMS=[
+  {n:"IA generativa — fundamentos",ids:["A1","A2","A3","A4","A5"],blk:"A"},
+  {n:"Agentes de IA",ids:["B1","B2","B3","B4","B5"],blk:"B"},
+  {n:"Casos de uso en tecnología",ids:["C1","C2","C3","C4","C5"],blk:"C"},
+  {n:"Ética, riesgos y límites",ids:["D1","D2","D3","D4","D5"],blk:"D"}
+];
+
+var ans={}, cur=0;
+
+function blkInfo(id){ return BLOCKS.find(function(b){return b.id===id;})||{}; }
+
+function score(){
+  var t=0,m=0;
+  Qs.filter(function(q){return q.correct;}).forEach(function(q){
+    m+=3; var a=ans[q.id];
+    if(a){var o=q.opts.find(function(x){return x.k===a;});if(o)t+=o.s;}
+  });
+  return{t:t,m:m,p:m>0?Math.round(t/m*100):0};
+}
+
+function dimScore(ids){
+  var t=0,m=0;
+  ids.forEach(function(id){
+    var q=Qs.find(function(x){return x.id===id;});
+    if(!q||!q.correct)return;
+    m+=3; var a=ans[id];
+    if(a){var o=q.opts.find(function(x){return x.k===a;});if(o)t+=o.s;}
+  });
+  return{t:t,m:m,p:m>0?Math.round(t/m*100):0};
+}
+
+function level(p){
+  if(p>=85)return{n:"Constructor / Habilitador",bg:"#EEEDFE",tc:"#26215C",desc:"Dominas fundamentos, criterio aplicado y conciencia de riesgos. Perfil habilitador para el equipo."};
+  if(p>=65)return{n:"Aplicador",bg:"#E1F5EE",tc:"#085041",desc:"Entiendes bien los conceptos y sabes cuándo y cómo aplicar IA. Algunos gaps en áreas específicas."};
+  if(p>=40)return{n:"Usuario con criterio",bg:"#E6F1FB",tc:"#0C447C",desc:"Usas herramientas de IA con cierto criterio pero necesitas reforzar fundamentos y gestión de riesgos."};
+  return{n:"Inicial",bg:"#FAEEDA",tc:"#633806",desc:"Conoces conceptos básicos. Hay una oportunidad clara de formación estructurada en los 4 temas."};
+}
+
+function canAdvance(){
+  if(cur>=Qs.length)return false;
+  var q=Qs[cur];
+  if(q.type==="name")return !!(ans[q.id]&&ans[q.id].trim().length>0);
+  if(q.type==="scale")return !!ans[q.id];
+  return !!ans[q.id];
+}
+
+function render(){
+  var total=Qs.length;
+  var pbSegs=BLOCKS.map(function(b){
+    var firstIdx=Qs.findIndex(function(q){return q.blk===b.id;});
+    var filled=firstIdx>=0&&cur>firstIdx;
+    var active=firstIdx>=0&&cur>=firstIdx&&Qs[cur]&&Qs[cur].blk===b.id;
+    var c=filled?b.color:active?b.color+"88":"#e8e6e0";
+    return '<div class="block-seg" style="background:'+c+';flex:5;"></div>';
+  }).join('');
+  var pbHtml='<div class="progress-wrap"><div class="blocks-bar">'+pbSegs+'</div><div class="progress-label">Pregunta '+(cur+1)+' de '+total+'</div></div>';
+
+  if(cur>=total){document.getElementById("app").innerHTML=pbHtml+renderResults();return;}
+
+  var q=Qs[cur];
+  var bi=blkInfo(q.blk);
+  var isLast=cur===total-1;
+  var ok=canAdvance();
+  var body='';
+
+  if(q.blk){
+    body+='<span class="section-tag" style="background:'+bi.bg+';color:'+bi.color+';">Bloque '+q.blk+' · '+bi.name+'</span>';
+  }
+  body+='<div class="q-meta">'+q.block+'</div>';
+
+  if(q.type==="name"){
+    var val=ans[q.id]||'';
+    body+='<div class="q-text">'+q.text+'</div>';
+    body+='<input class="name-input" type="text" value="'+val+'" placeholder="Escribe tu nombre completo..." oninput="ans[\'q0\']=this.value;render()" />';
+  } else if(q.type==="scale"){
+    body+='<div class="q-text">'+q.text+'</div>';
+    body+='<div class="scale-row">';
+    [1,2,3,4,5].forEach(function(n){
+      var sel=ans[q.id]===String(n);
+      body+='<button class="sc-btn'+(sel?' sel':'')+'" onclick="pickScale(\''+n+'\')">'+n+'</button>';
+    });
+    body+='</div><div class="sc-labels"><span>Básico</span><span>Avanzado</span></div>';
+  } else {
+    if(q.sc) body+='<div class="scenario" style="border-left-color:'+(bi.color||'#534AB7')+';">'+q.sc+'</div>';
+    body+='<div class="q-text">'+q.text+'</div>';
+    body+='<div class="opts">';
+    q.opts.forEach(function(o){
+      var sel=ans[q.id]===o.k;
+      body+='<button class="opt'+(sel?' sel':'')+'" style="--blk-color:'+(bi.color||'#534AB7')+';--blk-bg:'+(bi.bg||'#EEEDFE')+';" onclick="pickMC(\''+q.id+'\',\''+o.k+'\')"><span class="opt-k">'+o.k+'.</span><span>'+o.t+'</span></button>';
+    });
+    body+='</div>';
+    if(ans[q.id]&&q.why){
+      var isOk=ans[q.id]===q.correct;
+      body+='<div class="feedback '+(isOk?'ok':'ko')+'"><strong>'+(isOk?'Correcto':'Incorrecto')+'</strong> — '+q.why+'</div>';
+    }
+  }
+
+  body+='<div class="nav">';
+  body+=cur>0?'<button class="btn-back" onclick="goBack()">← Anterior</button>':'<div></div>';
+  body+='<div style="display:flex;align-items:center;gap:12px;">';
+  body+='<span class="step-count">'+(cur+1)+' / '+total+'</span>';
+  body+='<button class="btn-next" onclick="goNext()" '+(ok?'':'disabled')+'>'+(isLast?'Ver resultados':'Siguiente →')+'</button>';
+  body+='</div></div>';
+
+  document.getElementById("app").innerHTML=pbHtml+body;
+  if(q.type==="name"){var inp=document.querySelector(".name-input");if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}}
+}
+
+function renderResults(){
+  var sc=score();
+  var lv=level(sc.p);
+  var name=ans["q0"]||"Participante";
+  var h='<div class="result-card">';
+  h+='<div style="font-size:13px;color:#888780;margin-bottom:6px;">'+name+'</div>';
+  h+='<span class="level-badge" style="background:'+lv.bg+';color:'+lv.tc+';">'+lv.n+'</span>';
+  h+='<div class="score-big">'+sc.p+'%</div>';
+  h+='<div class="score-sub">'+sc.t+' de '+sc.m+' puntos</div>';
+  h+='<div class="score-desc">'+lv.desc+'</div>';
+  h+='</div>';
+  h+='<div class="result-card">';
+  h+='<div class="block-label">Puntuación por bloque</div>';
+  DIMS.forEach(function(d){
+    var ds=dimScore(d.ids);
+    var bi=blkInfo(d.blk);
+    var barColor=ds.p>=70?bi.color:ds.p>=40?"#378ADD":"#E24B4A";
+    h+='<div class="dim-block">';
+    h+='<div class="dim-header"><span class="dim-name">'+d.n+'</span><span class="dim-pct" style="color:'+bi.color+';">'+ds.p+'%</span></div>';
+    h+='<div class="dim-bar-bg"><div class="dim-bar-fill" style="width:'+ds.p+'%;background:'+barColor+';"></div></div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  var self=ans["q20"]?parseInt(ans["q20"])*20:null;
+  if(self!==null){
+    var diff=self-sc.p;
+    var msg=Math.abs(diff)<=12?"Autopercepción bien calibrada con el desempeño real.":diff>12?"Tendencia a sobreestimar en "+diff+"pts — hay brechas concretas que vale reforzar.":"Tendencia a subestimar en "+Math.abs(diff)+"pts — tienes más solidez de la que percibes.";
+    h+='<div class="calib-box">'+msg+'</div>';
+  }
+  h+='<div id="send-zone" style="margin-top:4px;">';
+  h+='<button class="btn-plan" id="btn-send" onclick="sendResults()">Enviar resultados al equipo</button>';
+  h+='<div id="send-msg" style="display:none;text-align:center;margin-top:12px;font-size:13px;"></div>';
+  h+='</div>';
+  return h;
+}
+
+function buildRespuestas(){
+  var parts=[];
+  Qs.forEach(function(q){
+    if(q.correct&&ans[q.id]) parts.push(q.id+':'+ans[q.id]);
+  });
+  return parts.join(',');
+}
+
+function sendResults(){
+  var POWER_AUTOMATE_URL='https://default4b44d568b16d4473b4e243da6cd2de.09.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/2a83ed0c18bb4519a53cae685ec30e16/triggers/manual/paths/invoke?api-version=1';
+  var sc=score();
+  var lv=level(sc.p);
+  var name=ans['q0']||'Anónimo';
+  var self=ans['q20']?parseInt(ans['q20']):0;
+  var da=dimScore(['A1','A2','A3','A4','A5']);
+  var db=dimScore(['B1','B2','B3','B4','B5']);
+  var dc=dimScore(['C1','C2','C3','C4','C5']);
+  var dd=dimScore(['D1','D2','D3','D4','D5']);
+
+  var payload={
+    nombre: name,
+    puntaje_total: sc.p,
+    nivel: lv.n,
+    bloque_a: da.p,
+    bloque_b: db.p,
+    bloque_c: dc.p,
+    bloque_d: dd.p,
+    autopercepcion: self,
+    respuestas: buildRespuestas()
+  };
+
+  var btn=document.getElementById('btn-send');
+  var msg=document.getElementById('send-msg');
+  btn.disabled=true;
+  btn.textContent='Enviando...';
+  btn.style.opacity='0.6';
+
+  fetch(POWER_AUTOMATE_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  })
+  .then(function(r){
+    if(r.ok||r.status===202){
+      btn.style.display='none';
+      msg.style.display='block';
+      msg.style.color='#085041';
+      msg.innerHTML='<strong>Resultados enviados correctamente.</strong><br>Tus respuestas han sido registradas en el sistema.';
+    } else {
+      throw new Error('HTTP '+r.status);
+    }
+  })
+  .catch(function(){
+    btn.disabled=false;
+    btn.textContent='Reintentar envío';
+    btn.style.opacity='1';
+    msg.style.display='block';
+    msg.style.color='#791F1F';
+    msg.innerHTML='No se pudo enviar. Verifica tu conexión e intenta de nuevo.';
+  });
+}
+
+function pickMC(id,k){ans[id]=k;render();}
+function pickScale(n){ans['q20']=String(n);render();}
+function goNext(){if(canAdvance()&&cur<Qs.length){cur++;render();}}
+function goBack(){if(cur>0){cur--;render();}}
+render();
+</script>
+</body>
+</html>
