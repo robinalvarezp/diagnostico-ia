@@ -211,7 +211,7 @@ var DIMS=[
   {n:"Ética, riesgos y límites",ids:["D1","D2","D3","D4","D5"],blk:"D"}
 ];
 
-var ans={}, cur=0, revealed={};
+var ans={}, cur=0;
 
 function blkInfo(id){ return BLOCKS.find(function(b){return b.id===id;})||{}; }
 
@@ -259,7 +259,7 @@ function render(){
     var c=filled?b.color:active?b.color+"88":"#e8e6e0";
     return '<div class="block-seg" style="background:'+c+';flex:5;"></div>';
   }).join('');
-  var pbHtml='<div class="progress-wrap"><div class="blocks-bar">'+pbSegs+'</div>'+(cur<total?'<div class="progress-label">Pregunta '+(cur+1)+' de '+total+'</div>':'')+'</div>';
+  var pbHtml='<div class="progress-wrap"><div class="blocks-bar">'+pbSegs+'</div><div class="progress-label">Pregunta '+(cur+1)+' de '+total+'</div></div>';
 
   if(cur>=total){document.getElementById("app").innerHTML=pbHtml+renderResults();return;}
 
@@ -289,18 +289,15 @@ function render(){
   } else {
     if(q.sc) body+='<div class="scenario" style="border-left-color:'+(bi.color||'#534AB7')+';">'+q.sc+'</div>';
     body+='<div class="q-text">'+q.text+'</div>';
-    var locked=!!ans[q.id];
     body+='<div class="opts">';
     q.opts.forEach(function(o){
       var sel=ans[q.id]===o.k;
-      var disabledAttr=locked&&!sel?' disabled style="--blk-color:'+(bi.color||'#534AB7')+';--blk-bg:'+(bi.bg||'#EEEDFE')+';opacity:0.4;cursor:default;"':' style="--blk-color:'+(bi.color||'#534AB7')+';--blk-bg:'+(bi.bg||'#EEEDFE')+';"';
-      var onclickAttr=locked?'':' onclick="pickMC(\''+q.id+'\',\''+o.k+'\')"';
-      body+='<button class="opt'+(sel?' sel':'')+'"'+disabledAttr+onclickAttr+'><span class="opt-k">'+o.k+'.</span><span>'+o.t+'</span></button>';
+      body+='<button class="opt'+(sel?' sel':'')+'" style="--blk-color:'+(bi.color||'#534AB7')+';--blk-bg:'+(bi.bg||'#EEEDFE')+';" onclick="pickMC(\''+q.id+'\',\''+o.k+'\')"><span class="opt-k">'+o.k+'.</span><span>'+o.t+'</span></button>';
     });
     body+='</div>';
-    if(revealed[q.id]&&q.why){
+    if(ans[q.id]&&q.why){
       var isOk=ans[q.id]===q.correct;
-      body+='<div class="feedback '+(isOk?'ok':'ko')+'"><strong>'+(isOk?'✓ Correcto':'✗ Incorrecto')+'</strong> — '+q.why+'</div>';
+      body+='<div class="feedback '+(isOk?'ok':'ko')+'"><strong>'+(isOk?'Correcto':'Incorrecto')+'</strong> — '+q.why+'</div>';
     }
   }
 
@@ -360,7 +357,7 @@ function buildRespuestas(){
 }
 
 function sendResults(){
-  var POWER_AUTOMATE_URL='https://default4b44d568b16d4473b4e243da6cd2de.09.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/2a83ed0c18bb4519a53cae685ec30e16/triggers/manual/paths/invoke?api-version=1';
+  var POWER_AUTOMATE_URL='https://default4b44d568b16d4473b4e243da6cd2de.09.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/2a83ed0c18bb4519a53cae685ec30e16/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=3D-dS_uWi9Eyzwnkc49U98C3a4W2wJcTdLTkI8HZbE4';
   var sc=score();
   var lv=level(sc.p);
   var name=ans['q0']||'Anónimo';
@@ -410,9 +407,9 @@ function sendResults(){
   });
 }
 
-function pickMC(id,k){if(!ans[id]){ans[id]=k;render();}}
+function pickMC(id,k){ans[id]=k;render();}
 function pickScale(n){ans['q20']=String(n);render();}
-function goNext(){if(canAdvance()&&cur<Qs.length){var q=Qs[cur];if(q.correct&&ans[q.id]){revealed[q.id]=true;}cur++;render();}}
+function goNext(){if(canAdvance()&&cur<Qs.length){cur++;render();}}
 function goBack(){if(cur>0){cur--;render();}}
 render();
 </script>
